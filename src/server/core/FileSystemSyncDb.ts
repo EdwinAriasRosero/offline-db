@@ -30,7 +30,7 @@ export class FileSystemSyncDb implements ISyncDB {
         await fs.writeFile(filePath, JSON.stringify(data, null, 2));
     }
 
-    public async sync(type: string, syncData: RecordModel[], timespan: number): Promise<{ hasChanged: boolean, data: RecordModel[] }> {
+    public async sync(type: string, syncData: RecordModel[], timespan: number): Promise<RecordModel[]> {
         await this.initialize(type);
         let currentData = await this.readData(type);
         let hasChanges: boolean = false;
@@ -67,9 +67,6 @@ export class FileSystemSyncDb implements ISyncDB {
 
         await this.writeData(type, currentData);
 
-        return {
-            hasChanged: hasChanges,
-            data: currentData.filter(collection => collection.record_timespan > timespan)
-        };
+        return currentData.filter(collection => collection.record_timespan > timespan);
     }
 }

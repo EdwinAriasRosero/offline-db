@@ -15,9 +15,11 @@
   "description": "",
   "dependencies": {
     "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
     "express": "^4.21.0",
     "express-ws": "^5.0.2",
-    "morgan": "^1.10.0"
+    "morgan": "^1.10.0",
+    "telegram": "^2.25.4"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
