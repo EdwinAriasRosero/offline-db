@@ -11,7 +11,7 @@ export class InMemorySyncDb implements ISyncDB {
         }
     };
 
-    async sync(type: string, syncData: RecordModel[], timespan: number): Promise<{ hasChanged: boolean, data: RecordModel[] }> {
+    async sync(type: string, syncData: RecordModel[], timespan: number): Promise<RecordModel[]> {
 
         this.initialize(type)
         let currentData = this.db[type];
@@ -45,9 +45,6 @@ export class InMemorySyncDb implements ISyncDB {
 
         this.db[type] = currentData;
 
-        return {
-            hasChanged: false,
-            data: this.db[type].filter(collection => collection.record_timespan > timespan)
-        }
+        return this.db[type].filter(collection => collection.record_timespan > timespan);
     };
 }
