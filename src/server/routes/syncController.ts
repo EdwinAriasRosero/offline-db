@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { FileSystemSyncDb } from '../core/FileSystemSyncDb';
-import { RecordModel } from '../core/RecordModel';
+import { RecordModel } from '../RecordModel';
 import expressWs from 'express-ws';
 import ISyncDB from '../core/ISyncDB';
 
@@ -10,10 +10,10 @@ const syncRoutes = (appWs: expressWs.Instance) => {
 
     appWs.app.ws('/db/echo', (ws, req) => {
         // Attach the WebSocket to the request object
-        (req as any).ws = ws;
+        //(req as any).ws = ws;
 
-        ws.on('message', async (data: any) => {
-            const { type, timespan, dataArray } = JSON.parse(data) as { type: string, timespan: number, dataArray: RecordModel[] };
+        ws.on('message', async (message: string) => {
+            const { type, timespan, dataArray } = JSON.parse(message) as { type: string, timespan: number, dataArray: RecordModel[] };
             const results = await db.sync(type, dataArray, Number(timespan));
 
             //if (results.hasChanged) {

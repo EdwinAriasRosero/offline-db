@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ES6",
+    "module": "commonjs",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "outDir": "../../dist/server",
+    "rootDir": "./"
+  },
+  "include": [
+    "./**/*.ts"
+, "../client/RecordModel copy.ts"  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

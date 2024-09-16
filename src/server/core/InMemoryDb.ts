@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import { RecordModel } from './RecordModel';
+import { RecordModel } from '../RecordModel';
 import ISyncDB from './ISyncDB';
 
 export class InMemorySyncDb implements ISyncDB {
@@ -47,7 +47,7 @@ export class InMemorySyncDb implements ISyncDB {
 
         return {
             hasChanged: false,
-            data: this.db[type].filter(collection => collection.record_timespan > timespan);
+            data: this.db[type].filter(collection => collection.record_timespan > timespan)
         }
     };
 }

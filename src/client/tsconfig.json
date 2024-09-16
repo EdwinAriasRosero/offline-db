@@ -6,11 +6,11 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "outDir": "./dist",
-    "rootDir": "./src"
+    "outDir": "../../dist/client",
+    "rootDir": "./"
   },
   "include": [
-    "src/**/*.ts"
+    "./**/*.ts"
   ],
   "exclude": [
     "node_modules"

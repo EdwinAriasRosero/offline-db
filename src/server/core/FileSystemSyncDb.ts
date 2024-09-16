@@ -1,5 +1,5 @@
 import { promises as fs } from 'fs';
-import { RecordModel } from './RecordModel';
+import { RecordModel } from '../RecordModel';
 import { randomUUID } from 'crypto';
 import ISyncDB from './ISyncDB';
 import path from 'path';
@@ -12,13 +12,9 @@ export class FileSystemSyncDb implements ISyncDB {
         const dirPath = path.dirname(filePath);
 
         try {
-            // Ensure the directory exists
             await fs.mkdir(dirPath, { recursive: true });
-
-            // Check if the file exists
             await fs.access(filePath);
         } catch {
-            // Create the file if it doesn't exist
             await fs.writeFile(filePath, JSON.stringify([]));
         }
     }
@@ -26,7 +22,6 @@ export class FileSystemSyncDb implements ISyncDB {
     private async readData(type: string): Promise<RecordModel[]> {
         const filePath = `${this.dbPath}/${type}.json`;
         const data = await fs.readFile(filePath, 'utf-8');
-
         return JSON.parse(data || '[]');
     }
 
@@ -47,8 +42,7 @@ export class FileSystemSyncDb implements ISyncDB {
             if (newData && (!newData.record_timespan || newData.record_timespan > current.record_timespan)) {
                 hasChanges = true;
                 return { ...newData, record_timespan: new Date().getTime() };
-            }
-            else {
+            } else {
                 return current;
             }
         });
@@ -76,6 +70,6 @@ export class FileSystemSyncDb implements ISyncDB {
         return {
             hasChanged: hasChanges,
             data: currentData.filter(collection => collection.record_timespan > timespan)
-        }
+        };
     }
 }
