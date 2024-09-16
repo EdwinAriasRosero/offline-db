@@ -9,10 +9,6 @@ const syncRoutes = (appWs: expressWs.Instance) => {
     const router = Router();
     const db: ISyncDB = new TelegramSyncDb();
 
-    router.get("/", (req, res) => {
-        res.send("db");
-    })
-
     appWs.app.ws('/db/echo', (ws, req) => {
 
         ws.on('message', async (message: string) => {

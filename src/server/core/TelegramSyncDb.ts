@@ -51,7 +51,7 @@ export class TelegramSyncDb implements ISyncDB {
                     record_timespan: undefined,
                     record_isDeleted: item.record_isDeleted ?? false,
                 }),
-                silent: true,
+                silent: true
             })
         });
 

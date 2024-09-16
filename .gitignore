@@ -4,4 +4,3 @@ db
 public
 package-lock.json
 .env
-.vercel
