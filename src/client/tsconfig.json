@@ -7,11 +7,12 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "outDir": "../../dist/client",
-    "rootDir": "./",
+    "rootDir": "../",
     "allowSyntheticDefaultImports": true
   },
   "include": [
-    "./**/*.ts"
+    "./**/*.ts",
+    "../shared/*.ts"
   ],
   "exclude": [
     "node_modules"

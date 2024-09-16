@@ -7,11 +7,12 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "outDir": "../../public",
-    "rootDir": "./"
+    "rootDir": "../"
   },
   "include": [
-    "./**/*.ts"
-, "../client/RecordModel copy.ts"  ],
+    "./**/*.ts",
+    "../shared/*.ts"
+  ],
   "exclude": [
     "node_modules"
   ]

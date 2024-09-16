@@ -1,9 +1,9 @@
 import { promises as fs } from 'fs';
-import { RecordModel } from '../RecordModel';
+import { RecordModel } from './RecordModel';
 import { randomUUID } from 'crypto';
 import ISyncDB from './ISyncDB';
 import path from 'path';
-import { replacer, reviver } from './jsonUtilities';
+import { replacer, reviver } from '../../shared/jsonUtilities';
 
 export class FileSystemSyncDb implements ISyncDB {
     private dbPath = './db';

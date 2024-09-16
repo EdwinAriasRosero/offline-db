@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import { RecordModel } from '../RecordModel';
+import { RecordModel } from '../core/RecordModel';
 import expressWs from 'express-ws';
 import ISyncDB from '../core/ISyncDB';
 import { TelegramSyncDb } from '../core/TelegramSyncDb';
-import { replacer, reviver } from '../core/jsonUtilities';
+import { replacer, reviver } from '../../shared/jsonUtilities';
 
 const syncRoutes = (appWs: expressWs.Instance) => {
     const router = Router();

@@ -1,4 +1,4 @@
-import { LocalDbClient } from "./localDbClient";
+import { IndexedDbClient } from "./indexedDbClient";
 import { SyncDbClient } from "./syncDbClient";
 
 const root = getElement("root");
@@ -11,13 +11,13 @@ getElement("update").onclick = () => {
     updateItem();
 }
 
-const syncClient = new SyncDbClient('https://offline-db-production.up.railway.app/db');
+const syncClient = new SyncDbClient('http:localhost:3000/db');
 syncClient.onConnected = async () => {
     await localDb.sync('ea');
     loadData("ea");
 }
 
-const localDb = new LocalDbClient(syncClient);
+const localDb = new IndexedDbClient(["ea"], syncClient);
 
 localDb.onUpdated = () => {
     loadData("ea");
@@ -28,12 +28,12 @@ function getElement(id: string): any {
 }
 
 async function addItem() {
-    await localDb.save("ea", [{ id: new Date().getTime(), name: getElement("newName").value }]);
+    await localDb.save("ea", [{ id: new Date().getTime().toString(), name: getElement("newName").value }]);
     getElement("newName").value = '';
 }
 
 async function updateItem() {
-    await localDb.update("ea", [{ id: 1, name: getElement("newName").value }]);
+    await localDb.update("ea", [{ id: "1", name: getElement("newName").value }]);
     getElement("newName").value = '';
 }
 

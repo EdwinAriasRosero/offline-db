@@ -38,7 +38,7 @@ export class SyncDbClient implements ISyncClient {
             };
 
             this.ws.onmessage = (event) => {
-                this.onSync && event.data && this.onSync(JSON.parse(event.data));
+                this.onSync && event.data && this.onSync(JSON.parse(event.data, reviver));
 
             };
         };
@@ -54,9 +54,43 @@ export class SyncDbClient implements ISyncClient {
 
         try {
             if (this.isConnected) {
-                await this.ws?.send(JSON.stringify({ type, timespan, dataArray }));
+                await this.ws?.send(JSON.stringify({ type, timespan, dataArray }, replacer));
             }
 
         } catch { }
     }
+}
+
+function replacer(key: string, value: any): any {
+    if (value instanceof Date) {
+        return { convertedTypeSerialization: 'Date', value: value.toISOString() };
+    }
+    if (value && typeof value === 'object') {
+        if (Array.isArray(value)) {
+            return value.map(item => replacer(key, item));
+        }
+        for (const k in value) {
+            if (value.hasOwnProperty(k)) {
+                value[k] = replacer(k, value[k]);
+            }
+        }
+    }
+    return value;
+}
+
+function reviver(key: string, value: any): any {
+    if (value && value.convertedTypeSerialization === 'Date') {
+        return new Date(value.value);
+    }
+    if (value && typeof value === 'object') {
+        if (Array.isArray(value)) {
+            return value.map(item => reviver(key, item));
+        }
+        for (const k in value) {
+            if (value.hasOwnProperty(k)) {
+                value[k] = reviver(k, value[k]);
+            }
+        }
+    }
+    return value;
 }

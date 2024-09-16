@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import { RecordModel } from '../RecordModel';
+import { RecordModel } from './RecordModel';
 import ISyncDB from './ISyncDB';
 
 export class InMemorySyncDb implements ISyncDB {

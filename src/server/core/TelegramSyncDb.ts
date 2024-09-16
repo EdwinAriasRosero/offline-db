@@ -1,9 +1,9 @@
 import { randomUUID } from "crypto";
-import { RecordModel } from "../RecordModel";
+import { RecordModel } from "./RecordModel";
 import { TelegramClient } from "telegram";
 import { Api } from 'telegram/tl';
 import ISyncDB from "./ISyncDB";
-import { replacer, reviver } from "./jsonUtilities";
+import { replacer, reviver } from "../../shared/jsonUtilities";
 
 const { StringSession } = require('telegram/sessions');
 
