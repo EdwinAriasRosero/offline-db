@@ -1,6 +1,6 @@
 export function replacer(key: string, value: any): any {
     if (value instanceof Date) {
-        return { __type: 'Date', value: value.toISOString() };
+        return { convertedTypeSerialization: 'Date', value: value.toISOString() };
     }
     if (value && typeof value === 'object') {
         if (Array.isArray(value)) {
@@ -16,7 +16,7 @@ export function replacer(key: string, value: any): any {
 }
 
 export function reviver(key: string, value: any): any {
-    if (value && value.__type === 'Date') {
+    if (value && value.convertedTypeSerialization === 'Date') {
         return new Date(value.value);
     }
     if (value && typeof value === 'object') {
