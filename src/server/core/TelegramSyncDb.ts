@@ -50,6 +50,7 @@ export class TelegramSyncDb implements ISyncDB {
                     record_id: item.record_id ?? randomUUID(),
                     record_timespan: undefined,
                     record_isDeleted: item.record_isDeleted ?? false,
+                    record_type: type
                 }),
                 silent: true
             })
@@ -61,6 +62,7 @@ export class TelegramSyncDb implements ISyncDB {
         return [... (await this.client.getMessages(this.chatId, { offsetDate: Math.floor(new Date(timespan).getTime() / 1000), reverse: true, }))
             .filter(m => m instanceof Api.Message)
             .map(m => ({ ...JSON.parse(m.message), record_timespan: m.date * 1000 }))
+            .filter(m => m.record_type === type)
         ];
     }
 

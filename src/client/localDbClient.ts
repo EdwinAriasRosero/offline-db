@@ -4,7 +4,7 @@ export class LocalDbClient {
 
     private syncClass?: ISyncClient;
 
-    constructor(syncClass: ISyncClient) {
+    constructor(syncClass?: ISyncClient) {
 
         if (syncClass) {
             this.syncClass = syncClass;
@@ -18,7 +18,7 @@ export class LocalDbClient {
                     const currentData = this._get(type);
 
                     const arrayDataIds = arrayData.map(x => x.record_id);
-                    const arrayDataIds2 = arrayData.map(x => x.id);
+                    const arrayDataIds2 = arrayData.map((x: any) => x.id);
 
                     const newData = [
                         ...currentData.filter((x: any) => !arrayDataIds.includes(x.record_id) && !arrayDataIds2.includes(x.id)),
@@ -34,15 +34,15 @@ export class LocalDbClient {
 
     onUpdated = () => { };
 
-    _get(type: string) {
+    private _get(type: string): any[] {
         return JSON.parse(localStorage.getItem(type) ?? '[]') ?? [];
     }
 
-    _assign(type: string, data: any[]) {
+    private _assign(type: string, data: any[]) {
         localStorage.setItem(type, JSON.stringify(data));
     }
 
-    _getLatestRemoreUpdate(type: string) {
+    private _getLatestRemoreUpdate(type: string) {
         let info = this._get(type).filter((x: any) => !!x.record_timespan);
         return info.length === 0 ? 0 : Math.max(...info.map((x: any) => x.record_timespan))
     }
@@ -57,13 +57,38 @@ export class LocalDbClient {
         this.onUpdated && this.onUpdated();
     }
 
-    async get(type: string) {
-        return this._get(type).filter((x: any) => !x.record_isDeleted);
+    async get<T>(type: string) {
+        return this._get(type).filter((x: any) => !x.record_isDeleted) as T[];
     }
 
     async save(type: string, arrayData: any[]) {
         const newData = [...this._get(type), ...arrayData.map(x => ({ ...x, record_timespan: undefined }))]
         this._assign(type, newData);
+
+        await this.sync(type);
+    }
+
+    async saveOrUpdate(type: string, arrayData: any[]) {
+
+        let currentData = this._get(type);
+
+
+        let newData = currentData.map((current: any) => {
+
+            let found = arrayData.find(_new => (current.record_id && current.record_id === _new.record_id) || current.id === _new.id);
+
+            if (found) {
+                return { ...found, id: current.id, record_id: current.record_id, record_timespan: undefined };
+            } else {
+                return current;
+            }
+        });
+
+        let newItems = arrayData.filter((current: any) => {
+            return !currentData.find(_new => (current.record_id && current.record_id === _new.record_id) || current.id === _new.id);
+        });
+
+        this._assign(type, [...newData, ...newItems]);
 
         await this.sync(type);
     }
