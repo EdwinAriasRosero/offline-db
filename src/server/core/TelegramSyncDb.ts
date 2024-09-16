@@ -10,7 +10,7 @@ export class TelegramSyncDb implements ISyncDB {
 
     private apiId = Number(process.env.TELEGRAM_API_ID);
     private apiHash = process.env.TELEGRAM_API_HASH;
-    private chatId: number = Number(process.env.TELEGRAM_API_HASH);
+    private chatId: number = Number(process.env.TELEGRAM_CHAT_ID);
     private stringSession = process.env.TELEGRAM_STRING_SESSION;
 
     private client: TelegramClient;
