@@ -11,7 +11,7 @@ getElement("update").onclick = () => {
     updateItem();
 }
 
-const syncClient = new SyncDbClient('http://localhost:3000/db');
+const syncClient = new SyncDbClient('https://offline-dhlgqgu7l-edwinariasroseros-projects.vercel.app/db');
 syncClient.onConnected = async () => {
     await localDb.sync('ea');
     loadData("ea");

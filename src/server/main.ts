@@ -19,6 +19,10 @@ app.use(express.json());
 //     res.sendFile('C:/DV/others/db-sync/client/index.html');
 // });
 
+app.get('/', (req, res) => {
+    res.send("Hello world!!");
+});
+
 app.use('/db', syncRoutes(appWs));
 
 app.listen(port, () => {
