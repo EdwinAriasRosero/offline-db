@@ -3,6 +3,7 @@ import { RecordModel } from "../RecordModel";
 import { TelegramClient } from "telegram";
 import { Api } from 'telegram/tl';
 import ISyncDB from "./ISyncDB";
+import { replacer, reviver } from "./jsonUtilities";
 
 const { StringSession } = require('telegram/sessions');
 
@@ -39,7 +40,7 @@ export class TelegramSyncDb implements ISyncDB {
 
         syncData.forEach(async (item) => {
             const updatedMessages = await this.client.getMessages(this.chatId, {
-                search: JSON.stringify({ id: item.id })
+                search: JSON.stringify({ id: item.id }, replacer)
             });
 
             await this.client.invoke(new Api.messages.DeleteMessages({ id: updatedMessages.map(m => m.id), revoke: true }));
@@ -51,7 +52,7 @@ export class TelegramSyncDb implements ISyncDB {
                     record_timespan: undefined,
                     record_isDeleted: item.record_isDeleted ?? false,
                     record_type: type
-                }),
+                }, replacer),
                 silent: true
             })
         });
@@ -61,9 +62,10 @@ export class TelegramSyncDb implements ISyncDB {
 
         return [... (await this.client.getMessages(this.chatId, { offsetDate: Math.floor(new Date(timespan).getTime() / 1000), reverse: true, }))
             .filter(m => m instanceof Api.Message)
-            .map(m => ({ ...JSON.parse(m.message), record_timespan: m.date * 1000 }))
+            .map(m => ({ ...JSON.parse(m.message, reviver), record_timespan: m.date * 1000 }))
             .filter(m => m.record_type === type)
         ];
     }
 
 }
+

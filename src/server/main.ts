@@ -15,14 +15,6 @@ app.use(cors());
 app.use(morgan('dev'));
 app.use(express.json());
 
-// app.get('/', (req, res) => {
-//     res.sendFile('C:/DV/others/db-sync/client/index.html');
-// });
-
-// app.get('/', (req, res) => {
-//     res.send("Hello world!!");
-// });
-
 app.use('/db', syncRoutes(appWs));
 
 app.listen(port, () => {

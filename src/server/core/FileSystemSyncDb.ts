@@ -3,6 +3,7 @@ import { RecordModel } from '../RecordModel';
 import { randomUUID } from 'crypto';
 import ISyncDB from './ISyncDB';
 import path from 'path';
+import { replacer, reviver } from './jsonUtilities';
 
 export class FileSystemSyncDb implements ISyncDB {
     private dbPath = './db';
@@ -22,12 +23,12 @@ export class FileSystemSyncDb implements ISyncDB {
     private async readData(type: string): Promise<RecordModel[]> {
         const filePath = `${this.dbPath}/${type}.json`;
         const data = await fs.readFile(filePath, 'utf-8');
-        return JSON.parse(data || '[]');
+        return JSON.parse(data || '[]', reviver);
     }
 
     private async writeData(type: string, data: RecordModel[]): Promise<void> {
         const filePath = `${this.dbPath}/${type}.json`;
-        await fs.writeFile(filePath, JSON.stringify(data, null, 2));
+        await fs.writeFile(filePath, JSON.stringify(data, replacer, 2));
     }
 
     public async sync(type: string, syncData: RecordModel[], timespan: number): Promise<RecordModel[]> {
