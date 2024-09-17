@@ -21,7 +21,6 @@ export class SyncDbClient implements ISyncClient {
             this.ws = new WebSocket(`${this.url.replace("http", "ws")}/sync`);
 
             this.ws.onopen = () => {
-                console.log('Connected');
                 this.isConnected = true;
                 this.onConnected && this.onConnected();
             };

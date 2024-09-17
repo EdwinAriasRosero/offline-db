@@ -8,7 +8,8 @@
     "forceConsistentCasingInFileNames": true,
     "outDir": "../../public",
     "rootDir": "../",
-    "allowSyntheticDefaultImports": true
+    "allowSyntheticDefaultImports": true,
+    "sourceMap": true
   },
   "include": [
     "./**/*.ts",

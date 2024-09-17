@@ -17,21 +17,55 @@ export class IndexedDbClient {
     private syncClass?: ISyncClient;
     private dbName = 'localDb';
 
+    private getCurrentStores() {
+        return new Promise<{ version: number, stores: string[] }>((res, rej) => {
+            let request = indexedDB.open(this.dbName);
+
+            request.onsuccess = event => {
+                const db = (event.target as IDBOpenDBRequest).result;
+                let data = { version: db.version, stores: [...db.objectStoreNames] };
+                db.close();
+                res(data);
+            };
+
+            request.onerror = error => {
+                rej(error);
+            }
+        });
+    }
+
+    private getOrCreateDefaultDb() {
+        return new Promise<IDBDatabase>(async (res, rej) => {
+            let currentStores = await this.getCurrentStores();
+
+            const missingStores = !this.stores.every(store => currentStores.stores.includes(store));
+
+            let request = (missingStores)
+                ? indexedDB.open(this.dbName, currentStores.version + 1)
+                : indexedDB.open(this.dbName);
+
+            request.onupgradeneeded = (event) => {
+                const db = (event.target as IDBOpenDBRequest).result;
+
+                this.stores.forEach(type => {
+                    if (!db.objectStoreNames.contains(type)) {
+                        db.createObjectStore(type, { keyPath: 'id' });
+                    }
+                });
+            };
+
+            request.onsuccess = event => {
+                const db = (event.target as IDBOpenDBRequest).result;
+                res(db);
+            }
+
+            request.onerror = error => {
+                rej(error);
+            }
+        });
+    }
+
     constructor(private stores: string[], syncClass?: ISyncClient) {
-
-        const request = indexedDB.open(this.dbName);
-
-        request.onupgradeneeded = (event) => {
-            const db = (event.target as IDBOpenDBRequest).result;
-
-            stores.forEach(type => {
-                if (!db.objectStoreNames.contains(type)) {
-                    db.createObjectStore(type, { keyPath: 'id' });
-                }
-            });
-
-        };
-
         if (syncClass) {
             this.syncClass = syncClass;
             this.syncClass.connect();
@@ -77,12 +111,13 @@ export class IndexedDbClient {
     }
 
     private async _get<T>(type: string): Promise<T[]> {
-        return new Promise((resolve, reject) => {
 
-            const request = indexedDB.open(this.dbName);
+        return new Promise(async (resolve, reject) => {
 
-            request.onsuccess = (event) => {
-                const db = (event.target as IDBOpenDBRequest).result;
+            let db: IDBDatabase | undefined;
+
+            try {
+                db = await this.getOrCreateDefaultDb();
 
                 const transaction = db.transaction(type, 'readonly');
                 const store = transaction.objectStore(type);
@@ -90,26 +125,30 @@ export class IndexedDbClient {
 
                 getRequest.onsuccess = () => {
                     resolve(getRequest.result || []);
-                    db.close();
+                    db?.close();
                 };
 
                 getRequest.onerror = () => {
                     reject(getRequest.error);
-                    db.close();
+                    db?.close();
                 };
-            };
 
-            request.onerror = () => {
-                reject(request.error);
-            };
+            } catch (error) {
+                reject(error);
+
+            } finally {
+                db?.close();
+            }
         });
     }
 
     private async _assign<T extends RecordModel>(type: string, data: T[], isFromServer: boolean = false) {
-        return new Promise((resolve, reject) => {
-            const request = indexedDB.open(this.dbName);
-            request.onsuccess = (event) => {
-                const db = (event.target as IDBOpenDBRequest).result;
+        return new Promise(async (resolve, reject) => {
+            let db: IDBDatabase | undefined;
+
+            try {
+                db = await this.getOrCreateDefaultDb();
+
                 const transaction = db.transaction(type, 'readwrite');
                 const store = transaction.objectStore(type);
 
@@ -130,12 +169,9 @@ export class IndexedDbClient {
                     }
                 })
 
-
-            };
-
-            request.onerror = () => {
-                reject(request.error);
-            };
+            } catch (error) {
+                reject(error);
+            }
         });
     }
 
