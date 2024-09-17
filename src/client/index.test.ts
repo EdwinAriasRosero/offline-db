@@ -1,4 +1,4 @@
-import { IndexedDbClient } from "./indexedDbClient";
+import { IndexedDbClient, IndexedDbInstace } from "./indexedDbClient";
 import { SyncDbClient } from "./syncDbClient";
 
 const root = getElement("root");
@@ -11,34 +11,35 @@ getElement("update").onclick = () => {
     updateItem();
 }
 
-const syncClient = new SyncDbClient('http:localhost:3000/db');
-syncClient.onConnected = async () => {
-    await localDb.sync('ea');
-    loadData("ea");
-}
-
-const localDb = new IndexedDbClient(["ea"], syncClient);
-
-localDb.onUpdated = () => {
-    loadData("ea");
-}
-
 function getElement(id: string): any {
     return document.getElementById(id);
 }
 
 async function addItem() {
-    await localDb.save("ea", [{ id: new Date().getTime().toString(), name: getElement("newName").value }]);
+    await eaEntity.save([{ id: new Date().getTime().toString(), name: getElement("newName").value }]);
     getElement("newName").value = '';
 }
 
 async function updateItem() {
-    await localDb.update("ea", [{ id: "1", name: getElement("newName").value }]);
+    eaEntity.update([{ id: "1", name: getElement("newName").value }]);
     getElement("newName").value = '';
 }
 
-async function loadData(type: string) {
-    var data = await localDb.get("ea");
+
+
+
+const syncClient = new SyncDbClient('http:localhost:3000/db');
+syncClient.onConnected = async () => {
+    await localDb.syncAll();
+}
+
+const localDb = new IndexedDbClient(["ea"], syncClient);
+
+const eaEntity = new IndexedDbInstace<any>(localDb, "ea")
+eaEntity.subscribe(() => loadData())
+
+async function loadData() {
+    var data = await eaEntity.get();
     root.innerHTML = '';
 
     data.forEach((element: any) => {
@@ -49,7 +50,7 @@ async function loadData(type: string) {
         const deleteButton = document.createElement('button');
         deleteButton.textContent = 'Delete';
         deleteButton.onclick = function () {
-            localDb.delete('ea', element.id);
+            eaEntity.delete(element.id);
         };
         li.appendChild(deleteButton)
 
@@ -58,4 +59,4 @@ async function loadData(type: string) {
     });
 }
 
-loadData("ea");
+loadData();
