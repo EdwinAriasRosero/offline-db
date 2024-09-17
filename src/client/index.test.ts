@@ -30,6 +30,7 @@ async function updateItem() {
 
 const syncClient = new SyncDbClient('http:localhost:3000/db');
 syncClient.onConnected = async () => {
+    console.log("connected");
     await localDb.syncAll();
 }
 

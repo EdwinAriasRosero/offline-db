@@ -18,45 +18,52 @@ export class SyncDbClient implements ISyncClient {
 
     connect() {
         const connectWebSocket = () => {
-            this.ws = new WebSocket(`${this.url.replace("http", "ws")}/sync`);
 
-            this.ws.onopen = () => {
-                this.isConnected = true;
-                this.onConnected && this.onConnected();
-            };
+            if (navigator.onLine) {
+                this.ws = new WebSocket(`${this.url.replace("http", "ws")}/sync`);
 
-            this.ws.onclose = () => {
-                console.log('Disconnected. Reconnecting...');
-                this.isConnected = false;
-                setTimeout(connectWebSocket, 5000); // Retry connection after 5 seconds
-            };
+                this.ws.onopen = () => {
+                    this.isConnected = true;
+                    this.onConnected && this.onConnected();
+                };
 
-            this.ws.onerror = (error) => {
-                console.error('WebSocket Error:', error);
-                this.isConnected = false;
-            };
+                this.ws.onclose = () => {
+                    console.log('Disconnected. Reconnecting...');
+                    this.isConnected = false;
+                    setTimeout(connectWebSocket, 5000); // Retry connection after 5 seconds
+                };
 
-            this.ws.onmessage = (event) => {
-                this.onSync && event.data && this.onSync(JSON.parse(event.data, reviver));
+                this.ws.onerror = (error) => {
+                    console.error('WebSocket Error:', error);
+                    this.isConnected = false;
+                };
 
-            };
+                this.ws.onmessage = (event) => {
+                    this.onSync && event.data && this.onSync(JSON.parse(event.data, reviver));
+
+                };
+
+            }
         };
 
         connectWebSocket();
+
+        window.addEventListener('online', () => {
+            connectWebSocket();
+        });
+
+        window.addEventListener('offline', () => {
+            this.isConnected = false;
+        });
     }
 
     onConnected = () => { }
     onSync = (event: { type: string, data: RecordModel[] }) => { }
 
     async sync(type: string, dataArray: RecordModel[], timespan: number) {
-
-
-        try {
-            if (this.isConnected) {
-                await this.ws?.send(JSON.stringify({ type, timespan, dataArray }, replacer));
-            }
-
-        } catch { }
+        if (this.isConnected) {
+            await this.ws?.send(JSON.stringify({ type, timespan, dataArray }, replacer));
+        }
     }
 }
 
