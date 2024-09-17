@@ -1,4 +1,4 @@
-import { RecordModel } from "./RecordModel";
+import { RecordModel } from "../shared/RecordModel";
 
 export interface ISyncClient {
     connect(): void;
@@ -18,7 +18,7 @@ export class SyncDbClient implements ISyncClient {
 
     connect() {
         const connectWebSocket = () => {
-            this.ws = new WebSocket(`${this.url.replace("http", "ws")}/echo`);
+            this.ws = new WebSocket(`${this.url.replace("http", "ws")}/sync`);
 
             this.ws.onopen = () => {
                 console.log('Connected');

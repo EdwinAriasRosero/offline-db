@@ -1,5 +1,5 @@
 import { promises as fs } from 'fs';
-import { RecordModel } from './RecordModel';
+import { RecordModel } from '../../shared/RecordModel';
 import { randomUUID } from 'crypto';
 import ISyncDB from './ISyncDB';
 import path from 'path';
@@ -31,18 +31,19 @@ export class FileSystemSyncDb implements ISyncDB {
         await fs.writeFile(filePath, JSON.stringify(data, replacer, 2));
     }
 
-    public async sync(type: string, syncData: RecordModel[], timespan: number): Promise<RecordModel[]> {
+    public async sync(type: string, syncData: RecordModel[], timespan: number): Promise<{ changes: RecordModel[], syncData: RecordModel[] }> {
         await this.initialize(type);
         let currentData = await this.readData(type);
-        let hasChanges: boolean = false;
+        let changes: RecordModel[] = [];
 
         // Updated or deleted
         currentData = currentData.map(current => {
             const newData = syncData.find(_new => _new.record_id === current.record_id);
 
-            if (newData && (!newData.record_timespan || newData.record_timespan > current.record_timespan)) {
-                hasChanges = true;
-                return { ...newData, record_timespan: new Date().getTime() };
+            if (newData && (!newData.record_timespan || newData.record_timespan > current.record_timespan!)) {
+                let newChange = { ...newData, record_timespan: new Date().getTime() };
+                changes.push(newChange);
+                return newChange;
             } else {
                 return current;
             }
@@ -56,18 +57,22 @@ export class FileSystemSyncDb implements ISyncDB {
             }))
             .filter(_new => !_new.current)
             .forEach(x => {
-                hasChanges = true;
-
-                currentData.push({
+                let newChange = {
                     ...x.newData!,
                     record_id: x.newData.record_id ?? randomUUID(),
                     record_timespan: new Date().getTime(),
                     record_isDeleted: false
-                });
+                };
+                changes.push(newChange);
+
+                currentData.push(newChange);
             });
 
         await this.writeData(type, currentData);
 
-        return currentData.filter(collection => collection.record_timespan > timespan);
+        return {
+            changes,
+            syncData: currentData.filter(collection => collection.record_timespan! > timespan)
+        };
     }
 }

@@ -1,4 +1,4 @@
-import { RecordModel } from "./RecordModel";
+import { RecordModel } from "../shared/RecordModel";
 import { ISyncClient } from "./syncDbClient";
 
 export class IndexedDbClient {
@@ -35,9 +35,9 @@ export class IndexedDbClient {
                         const newData = [
                             ...currentData.filter((x: any) => !arrayDataIds.includes(x.record_id) && !arrayDataIds2.includes(x.id)),
                             ...arrayData
-                        ];
+                        ] as RecordModel[];
 
-                        this._assign(type, newData);
+                        this._assign(type, newData, true);
                         this.onUpdated && this.onUpdated(type);
                     });
                 }
@@ -76,7 +76,7 @@ export class IndexedDbClient {
         });
     }
 
-    private async _assign<T>(type: string, data: T[]) {
+    private async _assign<T extends RecordModel>(type: string, data: T[], isFromServer: boolean = false) {
         return new Promise((resolve, reject) => {
             const request = indexedDB.open(this.dbName);
             request.onsuccess = (event) => {
@@ -86,15 +86,19 @@ export class IndexedDbClient {
 
                 data.forEach(item => {
 
-                    const putRequest = store.put(item);
+                    if (isFromServer && item.record_isDeleted) {
+                        store.delete(item.id);
+                    } else {
+                        const putRequest = store.put(item);
 
-                    putRequest.onsuccess = () => {
-                        resolve(putRequest.result);
-                    };
+                        putRequest.onsuccess = () => {
+                            resolve(putRequest.result);
+                        };
 
-                    putRequest.onerror = () => {
-                        reject(putRequest.error);
-                    };
+                        putRequest.onerror = () => {
+                            reject(putRequest.error);
+                        };
+                    }
                 })
 
 

@@ -1,18 +1,38 @@
 {
-  "name": "db-sync",
-  "version": "1.0.0",
-  "main": "src/main.js",
+  "name": "@ea-utilities/db-sync",
+  "version": "1.0.6",
+  "main": "dist/index.js",
   "scripts": {
+    "clean": "rimraf dist",
     "run:server": "ts-node src/server/main.ts",
     "start:server": "nodemon --config src/server/nodemon.json",
     "start": "nodemon --config src/server/nodemon.json",
     "build:server": "tsc --project src/server/tsconfig.json",
     "start:client": "webpack serve --config src/client/webpack.config.js",
-    "build:client": "webpack --config src/client/webpack.config.js"
+    "build:client:webpack": "webpack --config src/client/webpack.config.js",
+    "build:client": "tsc --project src/client/tsconfig.json",
+    "build": "npm run clean && tsc",
+    "publish": "npm run build && npm publish ."
   },
-  "author": "",
+  "author": "Edwin Arias",
   "license": "ISC",
   "description": "",
+  "keywords": [
+    "indexedDB",
+    "telegram",
+    "gramjs",
+    "database",
+    "offline database",
+    "db",
+    "react",
+    "angular",
+    "vue",
+    "express",
+    "web sockets"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
@@ -30,6 +50,7 @@
     "html-webpack-plugin": "^5.6.0",
     "node": "^22.8.0",
     "nodemon": "^3.1.4",
+    "rimraf": "^6.0.1",
     "ts-loader": "^9.5.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.6.2",
