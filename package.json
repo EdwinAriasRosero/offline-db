@@ -6,7 +6,7 @@
     "clean": "rimraf dist",
     "run:server": "ts-node src/server/main.ts",
     "start:server": "nodemon --config src/server/nodemon.json",
-    "start": "node dist/server/main.js",
+    "start": "node public/server/main.js",
     "start:watch": "nodemon --config src/server/nodemon.json",
     "build": "tsc --project src/server/tsconfig.json",
     "start:client": "webpack serve --config src/client/webpack.config.js",

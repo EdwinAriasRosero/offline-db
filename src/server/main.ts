@@ -16,4 +16,6 @@ app.use(express.json());
 
 app.use('/db', syncRoutes(appWs));
 
-app.listen(port, () => { });
+app.listen(port, () => {
+    console.log(`Example app listening on port ${port}`)
+});
