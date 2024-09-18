@@ -28,7 +28,7 @@ async function updateItem() {
 
 
 
-const syncClient = new SyncDbClient('http:localhost:3000/db');
+const syncClient = new SyncDbClient('https://farm-sync-db-e61c447e43af.herokuapp.com/db');
 syncClient.onConnected = async () => {
     console.log("connected");
     await localDb.syncAll();
