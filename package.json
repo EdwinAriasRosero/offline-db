@@ -7,11 +7,11 @@
     "run:server": "ts-node src/server/main.ts",
     "start:server": "nodemon --config src/server/nodemon.json",
     "start": "nodemon --config src/server/nodemon.json",
-    "build:server": "tsc --project src/server/tsconfig.json",
+    "build": "tsc --project src/server/tsconfig.json",
     "start:client": "webpack serve --config src/client/webpack.config.js",
     "build:client": "webpack --config src/client/webpack.config.js",
-    "build": "npm run clean && tsc",
-    "npm:publish": "npm run build && npm publish ."
+    "build:all": "npm run clean && tsc",
+    "npm:publish": "npm run build:all && npm publish ."
   },
   "author": "Edwin Arias",
   "license": "ISC",
