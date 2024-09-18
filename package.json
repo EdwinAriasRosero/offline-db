@@ -15,6 +15,9 @@
     "npm:publish": "npm run build:all && npm publish ."
   },
   "author": "Edwin Arias",
+  "engines": {
+    "node": "20.x"
+  },
   "license": "ISC",
   "description": "",
   "keywords": [
