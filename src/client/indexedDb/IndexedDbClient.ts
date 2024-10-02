@@ -1,36 +1,42 @@
-import { RecordModel } from "../shared/RecordModel";
-import { ISyncClient } from "./syncDbClient";
+import { IDbClient } from "../core/IDbClient";
+import { DbSubscription } from "../core/DbSubscription";
+import { ISyncClient } from "../../remote/core/ISyncClient";
+import { FILE_RECORD_TYPE, RecordModel } from "../../shared/RecordModel";
 
-export class IndexedDbSubscription {
+export class IndexedDbClient implements IDbClient {
 
-    constructor(public type: string,
-        public callback: () => void,
-        public instance: IndexedDbClient) {
-    }
-
-    unsubscribe() {
-        this.instance?.unsubscribe(this);
-    }
-}
-
-export class IndexedDbClient {
     private syncClass?: ISyncClient;
-    private dbName = 'localDb';
+    private subscriptions: DbSubscription[] = [];
+
+    public deleteLocalData(): Promise<boolean> {
+        return new Promise((res, rej) => {
+            var req = indexedDB.deleteDatabase(this.dbName);
+            req.onsuccess = function () {
+                res(true);
+            };
+            req.onerror = function () {
+                res(false);
+            };
+            req.onblocked = function () {
+                res(false);
+            };
+        })
+    }
 
     private getCurrentStores() {
-        return new Promise<{ version: number, stores: string[] }>((res, rej) => {
+        return new Promise<{ version: number; stores: string[]; }>((res, rej) => {
             let request = indexedDB.open(this.dbName);
 
             request.onsuccess = event => {
                 const db = (event.target as IDBOpenDBRequest).result;
-                let data = { version: db.version, stores: [...db.objectStoreNames] };
+                let data = { version: db.version, stores: [...(<any>db.objectStoreNames)] };
                 db.close();
                 res(data);
             };
 
             request.onerror = error => {
                 rej(error);
-            }
+            };
         });
     }
 
@@ -38,7 +44,7 @@ export class IndexedDbClient {
         return new Promise<IDBDatabase>(async (res, rej) => {
             let currentStores = await this.getCurrentStores();
 
-            const missingStores = !this.stores.every(store => currentStores.stores.includes(store));
+            const missingStores = !this.allStores.every(store => currentStores.stores.includes(store));
 
             let request = (missingStores)
                 ? indexedDB.open(this.dbName, currentStores.version + 1)
@@ -47,7 +53,7 @@ export class IndexedDbClient {
             request.onupgradeneeded = (event) => {
                 const db = (event.target as IDBOpenDBRequest).result;
 
-                this.stores.forEach(type => {
+                this.allStores.forEach(type => {
                     if (!db.objectStoreNames.contains(type)) {
                         db.createObjectStore(type, { keyPath: 'id' });
                     }
@@ -57,37 +63,42 @@ export class IndexedDbClient {
             request.onsuccess = event => {
                 const db = (event.target as IDBOpenDBRequest).result;
                 res(db);
-            }
+            };
 
             request.onerror = error => {
                 rej(error);
-            }
+            };
         });
     }
 
-    constructor(private stores: string[], syncClass?: ISyncClient) {
+    private get allStores() {
+        return [...this.stores, FILE_RECORD_TYPE];
+    }
+
+    constructor(private dbName: string, private stores: string[], syncClass?: ISyncClient) {
         if (syncClass) {
             this.syncClass = syncClass;
             this.syncClass.connect();
-            this.syncClass.onSync = (data) => {
-                let arrayData = data.data;
-                let type = data.type;
+            this.syncClass.onSync = (data) => this.onSync(data);
+        }
+    }
 
-                if (arrayData.length > 0) {
-                    this._get(type).then(currentData => {
-                        const arrayDataIds = arrayData.map(x => x.record_id);
-                        const arrayDataIds2 = arrayData.map((x: any) => x.id);
+    private async onSync(data: { type: string; data: RecordModel[] }) {
+        let arrayData = data.data;
+        let type = data.type;
 
-                        const newData = [
-                            ...currentData.filter((x: any) => !arrayDataIds.includes(x.record_id) && !arrayDataIds2.includes(x.id)),
-                            ...arrayData
-                        ] as RecordModel[];
+        if (arrayData.length > 0) {
+            const currentData = await this._get(type)
+            const arrayDataIds = arrayData.map(x => x.record_id);
+            const arrayDataIds2 = arrayData.map((x: any) => x.id);
 
-                        this._assign(type, newData, true);
-                        this.onUpdated && this.onUpdated(type);
-                    });
-                }
-            }
+            const newData = [
+                ...currentData.filter((x: any) => !arrayDataIds.includes(x.record_id) && !arrayDataIds2.includes(x.id)),
+                ...arrayData
+            ] as RecordModel[];
+
+            this._assign(type, newData, true);
+            this.onUpdated && this.onUpdated(type);
         }
     }
 
@@ -97,18 +108,15 @@ export class IndexedDbClient {
             .forEach(sub => sub.callback());
     };
 
-
-    private subscriptions: IndexedDbSubscription[] = [];
-
-    public subscribe = (type: string, callback: () => void) => {
-        const subscription = new IndexedDbSubscription(type, callback, this);
+    public subscribe(type: string, callback: () => void) {
+        const subscription = new DbSubscription(type, callback, this);
         this.subscriptions.push(subscription);
         return subscription;
-    }
+    };
 
-    public unsubscribe = (subscription: IndexedDbSubscription) => {
+    public unsubscribe(subscription: DbSubscription) {
         this.subscriptions = this.subscriptions.filter(sub => sub !== subscription);
-    }
+    };
 
     private async _get<T>(type: string): Promise<T[]> {
 
@@ -167,7 +175,7 @@ export class IndexedDbClient {
                             reject(putRequest.error);
                         };
                     }
-                })
+                });
 
             } catch (error) {
                 reject(error);
@@ -182,16 +190,16 @@ export class IndexedDbClient {
     }
 
     async syncAll() {
-        this.stores.forEach(store => this.sync(store));
+        this.allStores.forEach((store) => this.sync(store));
     }
 
     async sync<T extends RecordModel>(type: string) {
-        if (this.syncClass) {
-            const syncNewData = (await this._get<T>(type)).filter((x: T) => !x.record_timespan || !x.record_id) as T[];
-            await this.syncClass.sync(type, syncNewData ?? [], await this._getLatestRemoteUpdate(type));
-        }
-
         this.onUpdated && this.onUpdated(type);
+
+        if (this.syncClass && this.syncClass.isConnected) {
+            const syncNewData = (await this._get<T>(type)).filter((x: T) => !x.record_timespan || !x.record_id) as T[];
+            this.syncClass.sync(type, syncNewData ?? [], await this._getLatestRemoteUpdate(type));
+        }
     }
 
     async get<T extends RecordModel>(type: string): Promise<T[]> {
@@ -199,7 +207,7 @@ export class IndexedDbClient {
         return data.filter((x: T) => !x.record_isDeleted) as T[];
     }
 
-    async save<T extends RecordModel>(type: string, arrayData: T[]) {
+    async add<T extends RecordModel>(type: string, arrayData: T[]) {
         const currentData = await this._get<T>(type);
         const newData = [...currentData, ...arrayData.map(x => ({ ...x, record_timespan: undefined }))];
         await this._assign(type, newData);
@@ -207,7 +215,7 @@ export class IndexedDbClient {
         await this.sync(type);
     }
 
-    async saveOrUpdate<T extends RecordModel>(type: string, arrayData: T[]) {
+    async addOrUpdate<T extends RecordModel>(type: string, arrayData: T[]) {
         const currentData = await this._get<T>(type);
 
         const newData = currentData.map((current: T) => {
@@ -252,42 +260,5 @@ export class IndexedDbClient {
         const newData = currentData.map((x: T) => x.id.toString() === id.toString() ? { ...x, record_timespan: undefined, record_isDeleted: true } : x);
         await this._assign(type, newData);
         await this.sync(type);
-    }
-}
-
-export class IndexedDbInstace<T extends RecordModel> {
-
-    constructor(private client: IndexedDbClient, private type: string) { }
-
-    subscribe(callback: () => void) {
-        return this.client.subscribe(this.type, callback);
-    }
-
-    async get(): Promise<T[]> {
-        return await this.client.get(this.type) as T[];
-    }
-
-    async save(arrayData: T[]) {
-        return await this.client.save(this.type, arrayData);
-    }
-
-    async update(arrayData: T[]) {
-        return await this.client.update(this.type, arrayData);
-    }
-
-    async saveOrUpdate(arrayData: T[]) {
-        return await this.client.saveOrUpdate(this.type, arrayData);
-    }
-
-    async delete(id: string) {
-        return await this.client.delete(this.type, id);
-    }
-
-    async sync() {
-        this.client.sync(this.type);
-    }
-
-    afterSync() {
-
     }
 }

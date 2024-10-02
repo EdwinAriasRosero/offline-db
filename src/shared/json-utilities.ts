@@ -1,4 +1,4 @@
-export function replacer(key: string, value: any): any {
+export const replacer = (key: string, value: any): any => {
     if (value instanceof Date) {
         return { convertedTypeSerialization: 'Date', value: value.toISOString() };
     }
@@ -15,7 +15,7 @@ export function replacer(key: string, value: any): any {
     return value;
 }
 
-export function reviver(key: string, value: any): any {
+export const reviver = (key: string, value: any): any => {
     if (value && value.convertedTypeSerialization === 'Date') {
         return new Date(value.value);
     }
