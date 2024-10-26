@@ -19,7 +19,7 @@ export class TelegramInfo {
 
     static isValid() {
         const settings = TelegramInfo.getConfig;
-        return settings && settings.appId && settings.appHash && settings.phone;
+        return settings && settings.appId && settings.appHash && settings.phone && settings.chatName;
     }
 
     static get chatName(): string {

@@ -1,12 +1,13 @@
 {
   "name": "@ea-utilities/db-sync",
-  "version": "1.0.19",
+  "version": "1.0.21",
   "main": "dist/index.js",
   "scripts": {
     "clean": "rimraf dist",
     "build": "npm run clean && tsc",
     "npm:publish": "npm run build && npm publish .",
-    "prepare": "relative-deps"
+    "prepare": "relative-deps",
+    "relative-deps": "npm run build && npm run prepare"
   },
   "author": "Edwin Arias",
   "license": "ISC",

@@ -1,15 +1,9 @@
-
 import { reviver, replacer } from "../../shared/json-utilities";
 import { RecordModel, FILE_RECORD_TYPE, FileRecordModel } from "../../shared/RecordModel";
 import { ISyncClient } from "../core/ISyncClient";
 import { TelegramInfo, TelegramSettings } from "./TelegramInfo";
 
-//export const telegram = (window as any).telegram;
-
-//import telegram from './telegram';
 const telegram = require('./telegram');
-//1111
-
 const TelegramClient = telegram.TelegramClient;
 const Api = telegram.Api;
 const { StringSession } = telegram.sessions;
@@ -65,24 +59,41 @@ export class TelegramSyncClient implements ISyncClient {
     }
 
     async auth(infoSettings: TelegramSettings, retries: number = 1) {
-        if (!TelegramInfo.isValid())
-            return;
+        if (!TelegramInfo.isValid()) {
+            throw new Error('Please check Api connection values (appId, appHash, phone number and chat name)');
+        }
 
         this.client = new TelegramClient(new StringSession(infoSettings.session), Number(infoSettings.appId), infoSettings.appHash, { connectionRetries: retries });
 
-        const newSession = await this.startAsync(infoSettings.phone);
+        //Connect to phone
+        let newSession = '';
+        try {
+            newSession = await this.startAsync(infoSettings.phone);
+
+            TelegramInfo.saveConfig({
+                ...infoSettings,
+                session: newSession
+            });
+        } catch (ex) {
+            throw new Error('Please check Api connection values (appId, appHash and phone number)');
+        }
+
+        //Connect to chat
         let chatId = Number((await this.client.getDialogs()).find((x: any) => x.name === TelegramInfo.chatName)?.id ?? 0);
-        await this.start();
-        await this.client.connect();
-
-        this.onConnectionChanges && this.onConnectionChanges(this.isConnected);
-
+        if (!chatId || chatId === 0) {
+            throw new Error(`Please check chat name exists or you have access '${TelegramInfo.chatName}'`);
+        }
         TelegramInfo.saveConfig({
             ...infoSettings,
             session: newSession,
             chatId: chatId
         });
 
+        //Start sync process
+        await this.start();
+        await this.client.connect();
+
+        this.onConnectionChanges && this.onConnectionChanges(this.isConnected);
         this.reconnectListeners();
 
         return newSession;
@@ -232,8 +243,7 @@ export class TelegramSyncClient implements ISyncClient {
     private async getNewMessages(type: string, chatId: number, timespan: number) {
         const messages = await this.client.getMessages(chatId, {
             offsetDate: Math.floor(new Date(timespan).getTime() / 1000) + 1,
-            reverse: true,
-            // search: JSON.stringify({ record_type: type }, replacer)
+            reverse: true
         });
 
         const data = ((await Promise.all(
