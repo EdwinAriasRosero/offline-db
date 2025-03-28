@@ -2,11 +2,12 @@ import { reviver, replacer } from "../../shared/json-utilities";
 import { RecordModel, FILE_RECORD_TYPE, FileRecordModel } from "../../shared/RecordModel";
 import { ISyncClient } from "../core/ISyncClient";
 import { TelegramInfo, TelegramSettings } from "./TelegramInfo";
+import './telegram';
 
-const telegram = require('./telegram');
+declare const telegram: any;
 const TelegramClient = telegram.TelegramClient;
 const Api = telegram.Api;
-const { StringSession } = telegram.sessions;
+const StringSession = telegram.sessions.StringSession;
 
 
 export class TelegramService {
@@ -59,6 +60,11 @@ export class TelegramSyncClient implements ISyncClient {
     }
 
     async auth(infoSettings: TelegramSettings, retries: number = 1) {
+
+        if (infoSettings) {
+            TelegramInfo.saveConfig(infoSettings);
+        }
+
         if (!TelegramInfo.isValid()) {
             throw new Error('Please check Api connection values (appId, appHash, phone number and chat name)');
         }

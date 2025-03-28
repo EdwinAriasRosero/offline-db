@@ -1,6 +1,6 @@
 {
   "name": "@ea-utilities/db-sync",
-  "version": "1.0.22",
+  "version": "1.0.23",
   "main": "dist/index.js",
   "scripts": {
     "clean": "rimraf dist",
