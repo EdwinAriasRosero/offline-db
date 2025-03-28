@@ -1,13 +1,17 @@
 import { IDbClient } from "./IDbClient";
 import { RecordModel } from "../../shared/RecordModel";
+import { DbSubscription } from "./DbSubscription";
 
 export class DbInstace<T extends RecordModel> {
+
+    private subscription: DbSubscription[] = [];
 
     constructor(protected client: IDbClient, private type: string) { }
 
     subscribe(callback: () => void) {
         const subscription = this.client.subscribe(this.type, callback);
         this.sync();
+        this.subscription.push(subscription);
         return subscription;
     }
 
@@ -33,5 +37,10 @@ export class DbInstace<T extends RecordModel> {
 
     async sync() {
         this.client.sync(this.type);
+    }
+
+    unsubscribe() {
+        this.subscription.forEach(s => s.unsubscribe());
+        this.subscription = [];
     }
 }
