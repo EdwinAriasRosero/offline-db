@@ -5,9 +5,15 @@ import { TelegramInfo, TelegramSettings } from "./TelegramInfo";
 import './telegram';
 
 declare const telegram: any;
-const TelegramClient = telegram.TelegramClient;
-const Api = telegram.Api;
-const StringSession = telegram.sessions.StringSession;
+let TelegramClient: any;
+let Api: any;
+let StringSession: any;
+
+try {
+    TelegramClient = telegram.TelegramClient;
+    Api = telegram.Api;
+    StringSession = telegram.sessions.StringSession;
+} catch { }
 
 
 export class TelegramService {
