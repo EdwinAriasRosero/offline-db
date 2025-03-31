@@ -5,7 +5,7 @@ import { FILE_RECORD_TYPE, RecordModel } from "../../shared/RecordModel";
 
 export class IndexedDbClient implements IDbClient {
 
-    private syncClass?: ISyncClient;
+    private syncClass?: ISyncClient<any>;
     private subscriptions: DbSubscription[] = [];
 
     public deleteLocalData(): Promise<boolean> {
@@ -75,10 +75,9 @@ export class IndexedDbClient implements IDbClient {
         return [...this.stores, FILE_RECORD_TYPE];
     }
 
-    constructor(private dbName: string, private stores: string[], syncClass?: ISyncClient) {
+    constructor(private dbName: string, private stores: string[], syncClass?: ISyncClient<any>) {
         if (syncClass) {
             this.syncClass = syncClass;
-            this.syncClass.connect();
             this.syncClass.onSync = (data) => this.onSync(data);
         }
     }

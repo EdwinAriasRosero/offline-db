@@ -1,7 +1,9 @@
-import { reviver, replacer } from "../../shared/json-utilities";
-import { RecordModel, FILE_RECORD_TYPE, FileRecordModel } from "../../shared/RecordModel";
+import { replacer } from "../../shared/json-utilities";
+import { RecordModel, FileRecordModel } from "../../shared/RecordModel";
 import { ISyncClient } from "../core/ISyncClient";
-import { TelegramInfo, TelegramSettings } from "./TelegramInfo";
+import { TelegramInfo } from "./TelegramInfo";
+import { TelegramSettings } from "./TelegramSettings";
+import { TelegramService } from "./TelegramService";
 import './telegram';
 
 declare const telegram: any;
@@ -9,46 +11,7 @@ let TelegramClient: any;
 let Api: any;
 let StringSession: any;
 
-try {
-    TelegramClient = telegram.TelegramClient;
-    Api = telegram.Api;
-    StringSession = telegram.sessions.StringSession;
-} catch { }
-
-
-export class TelegramService {
-
-    async parseToModel(client: any, message: any) {
-        try {
-            const record = JSON.parse(message.message, reviver) as RecordModel;
-            let buffer: any = undefined;
-
-            if (record.record_type === FILE_RECORD_TYPE && record.record_file_ref) {
-                const fileMessage = (await client.getMessages(TelegramInfo.chatId, { ids: [record.record_file_ref] }))[0];
-
-                if (fileMessage) {
-                    buffer = await client.downloadMedia(fileMessage.media);
-                }
-            }
-
-            return {
-                ...record,
-                record_id: message.id,
-                record_file: buffer,
-                record_timespan: message.date * 1000
-            };
-        }
-        catch (error) {
-            return undefined;
-        }
-    }
-
-    parseToMessage(record: RecordModel) {
-        return JSON.stringify(structuredClone(record), replacer);
-    }
-}
-
-export class TelegramSyncClient implements ISyncClient {
+export class TelegramSyncClient implements ISyncClient<TelegramSettings> {
 
     client: any;
 
@@ -63,52 +26,6 @@ export class TelegramSyncClient implements ISyncClient {
 
             res(this.client.session.save());
         })
-    }
-
-    async auth(infoSettings: TelegramSettings, retries: number = 1) {
-
-        if (infoSettings) {
-            TelegramInfo.saveConfig(infoSettings);
-        }
-
-        if (!TelegramInfo.isValid()) {
-            throw new Error('Please check Api connection values (appId, appHash, phone number and chat name)');
-        }
-
-        this.client = new TelegramClient(new StringSession(infoSettings.session), Number(infoSettings.appId), infoSettings.appHash, { connectionRetries: retries });
-
-        //Connect to phone
-        let newSession = '';
-        try {
-            newSession = await this.startAsync(infoSettings.phone);
-
-            TelegramInfo.saveConfig({
-                ...infoSettings,
-                session: newSession
-            });
-        } catch (ex) {
-            throw new Error('Please check Api connection values (appId, appHash and phone number)');
-        }
-
-        //Connect to chat
-        let chatId = Number((await this.client.getDialogs()).find((x: any) => x.name === TelegramInfo.chatName)?.id ?? 0);
-        if (!chatId || chatId === 0) {
-            throw new Error(`Please check chat name exists or you have access '${TelegramInfo.chatName}'`);
-        }
-        TelegramInfo.saveConfig({
-            ...infoSettings,
-            session: newSession,
-            chatId: chatId
-        });
-
-        //Start sync process
-        await this.start();
-        await this.client.connect();
-
-        this.onConnectionChanges && this.onConnectionChanges(this.isConnected);
-        this.reconnectListeners();
-
-        return newSession;
     }
 
     private async handleOnline() {
@@ -137,11 +54,15 @@ export class TelegramSyncClient implements ISyncClient {
 
         this.utils = new TelegramService();
         this.start();
+
+        TelegramClient = telegram.TelegramClient;
+        Api = telegram.Api;
+        StringSession = telegram.sessions.StringSession;
     }
 
     private async start() {
         try {
-            if (!TelegramInfo.session || !TelegramInfo.chatName) {
+            if (!this.currentSettings?.session || !this.currentSettings?.chatName) {
                 return;
             }
 
@@ -155,8 +76,44 @@ export class TelegramSyncClient implements ISyncClient {
         }
     }
 
-    connect() {
-        this.auth(TelegramInfo.getConfig);
+    currentSettings?: TelegramSettings;
+
+    async connect(settings: TelegramSettings): Promise<TelegramSettings> {
+        if (!TelegramInfo.isValid(settings)) {
+            throw new Error('Please check Api connection values (appId, appHash, phone number and chat name)');
+        }
+
+        this.currentSettings = settings;
+
+        this.client = new TelegramClient(new StringSession(settings.session),
+            Number(settings.appId),
+            settings.appHash,
+            { connectionRetries: settings.retries ?? 1 });
+
+        //Connect to phone
+        let newSession = '';
+        try {
+            newSession = await this.startAsync(settings.phone);
+        } catch (ex) {
+            throw new Error('Please check Api connection values (appId, appHash and phone number)');
+        }
+
+        //Connect to chat
+        const chats = await this.client.getDialogs();
+        const chatId = Number(chats.find((x: any) => x.name === settings.chatName)?.id ?? 0);
+        if (!chatId || chatId === 0) {
+            throw new Error(`Please check chat name exists or you have access '${settings.chatName}'`);
+        }
+
+        //Start sync process
+        await this.start();
+        await this.client.connect();
+
+        this.onConnectionChanges && this.onConnectionChanges(this.isConnected);
+        this.reconnectListeners();
+
+        // return newSession;
+        return { ...settings, session: newSession, chatId };
     }
 
     get isConnected() {
@@ -169,17 +126,17 @@ export class TelegramSyncClient implements ISyncClient {
         let fileMessagesIds: string[] = [];
 
         if ((<FileRecordModel>item).record_file) {
-            const serverData = [...(await this.client.getMessages(TelegramInfo.chatId, {
+            const serverData = [...(await this.client.getMessages(this.currentSettings?.chatId, {
                 search: JSON.stringify({ id: item.id }, replacer)
             }))];
-            const fileMessagesList = await Promise.all(serverData.map(async (x) => await this.utils.parseToModel(this.client, x)));
+            const fileMessagesList = await Promise.all(serverData.map(async (x) => await this.utils.parseToModel(this.client, this.currentSettings?.chatId, x)));
             const fileMessages = fileMessagesList.filter((x: RecordModel | undefined) => x && x.id === item.id);
 
             fileMessagesIds = [...fileMessagesIds, ...fileMessages.map(x => x?.record_id), ...fileMessages.map(x => x?.record_file_ref)];
         }
 
         if (item.record_id) {
-            const recordIds = [...await this.client.getMessages(TelegramInfo.chatId, { ids: [...fileMessagesIds, Number(item.record_id)] })].filter(x => !!x);
+            const recordIds = [...await this.client.getMessages(this.currentSettings?.chatId, { ids: [...fileMessagesIds, Number(item.record_id)] })].filter(x => !!x);
             fileMessagesIds = [fileMessagesIds, ...[...recordIds].map(x => x.id)];
         }
 
@@ -196,7 +153,7 @@ export class TelegramSyncClient implements ISyncClient {
             const toUpload = new telegram.client.uploads.CustomFile(`${(new Date()).getTime()}.${fileItem.record_file_extension}`, fileSize, item.id, arrayBuffer)
 
             try {
-                const result = await this.client.sendFile(TelegramInfo.chatId, {
+                const result = await this.client.sendFile(this.currentSettings?.chatId, {
                     file: toUpload,
                     workers: 1,
                 });
@@ -223,7 +180,7 @@ export class TelegramSyncClient implements ISyncClient {
             record_file_ref: fileRef
         } as RecordModel;
 
-        const result = await this.client.sendMessage(TelegramInfo.chatId, {
+        const result = await this.client.sendMessage(this.currentSettings?.chatId, {
             message: this.utils.parseToMessage({ ...newChange, record_file: undefined }),
             silent: true
         });
@@ -232,7 +189,7 @@ export class TelegramSyncClient implements ISyncClient {
     }
 
     async sync(type: string, syncData: RecordModel[], timespan: number) {
-        if (!this.isConnected || !TelegramInfo.chatId || TelegramInfo.chatId === 0) {
+        if (!this.isConnected || !this.currentSettings?.chatId || this.currentSettings?.chatId === 0) {
             await this.onSync({ type, data: syncData });
             return;
         }
@@ -246,7 +203,7 @@ export class TelegramSyncClient implements ISyncClient {
             await this.addNewMessage(type, item, user, fileRef);
         }));
 
-        const data = await this.getNewMessages(type, TelegramInfo.chatId, timespan);
+        const data = await this.getNewMessages(type, this.currentSettings?.chatId, timespan);
         if (data.length > 0) {
             await this.onSync({ type, data });
         }
@@ -262,7 +219,7 @@ export class TelegramSyncClient implements ISyncClient {
             [...messages]
                 .filter((m: any) => m instanceof Api.Message)
                 .map(async (m: any) => {
-                    const message = await this.utils.parseToModel(this.client, m);
+                    const message = await this.utils.parseToModel(this.client, this.currentSettings?.chatId, m);
 
                     if (message) {
                         return {
@@ -286,7 +243,7 @@ export class TelegramSyncClient implements ISyncClient {
 
             if (["UpdateNewMessage"].includes(event.className)) {
 
-                const message = await this.utils.parseToModel(this.client, event.message);
+                const message = await this.utils.parseToModel(this.client, this.currentSettings?.chatId, event.message);
 
                 if (message) {
                     await this.onSync({
